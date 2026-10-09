@@ -3,7 +3,8 @@
 
   const STORAGE_KEYS = {
     highScore: "spaceStrikeHighScore",
-    soundOn: "spaceStrikeSoundOn"
+    soundOn: "spaceStrikeSoundOn",
+    controlMode: "spaceStrikeControlMode"
   };
 
   const STATES = {
@@ -532,6 +533,11 @@
       this.waveEl = document.getElementById("waveValue");
       this.startHighScoreEl = document.getElementById("startHighScore");
       this.soundToggle = document.getElementById("soundToggle");
+      this.devicePromptEl = document.getElementById("devicePrompt");
+      this.mobileModeBtn = document.getElementById("mobileModeBtn");
+      this.desktopModeBtn = document.getElementById("desktopModeBtn");
+      this.mobileHowTo = document.getElementById("mobileHowTo");
+      this.desktopHowTo = document.getElementById("desktopHowTo");
 
       this.finalScoreEl = document.getElementById("finalScore");
       this.finalHighScoreEl = document.getElementById("finalHighScore");
@@ -574,10 +580,11 @@
       this.enemySpawnInterval = 1.2;
       this.waveTimer = 0;
       this.nextWaveScore = 120;
-      this.runStartHighScore = this.highScore;
-
       this.hudCache = {};
       this.highScore = Number(storage.get(STORAGE_KEYS.highScore, 0)) || 0;
+      this.runStartHighScore = this.highScore;
+      this.controlMode = null;
+      this.isTouchDevice = window.matchMedia("(hover: none), (pointer: coarse)").matches;
 
       const savedSound = storage.get(STORAGE_KEYS.soundOn, "true");
       this.soundOn = savedSound !== "false";
@@ -585,6 +592,8 @@
       this.input = new InputHandler();
 
       this.bindEvents();
+      document.body.classList.toggle("touch-device", this.isTouchDevice);
+      this.restoreControlMode();
       this.resize();
       this.initStars();
       this.player = new Player(this);
@@ -599,9 +608,16 @@
       this.input.bind(this);
 
       this.playNowBtn.addEventListener("click", () => {
+        if (!this.controlMode) {
+          this.setControlMode(this.getRecommendedControlMode(), { persist: false });
+          this.devicePromptEl.textContent = "Using recommended controls. You can switch any time.";
+        }
         this.audio.initialize();
         this.startGame();
       });
+
+      this.mobileModeBtn.addEventListener("click", () => this.setControlMode("mobile"));
+      this.desktopModeBtn.addEventListener("click", () => this.setControlMode("desktop"));
 
       this.resumeBtn.addEventListener("click", () => this.togglePause(false));
       this.pauseRestartBtn.addEventListener("click", () => this.startGame());
@@ -617,6 +633,43 @@
       });
 
       window.addEventListener("resize", () => this.resize());
+    }
+
+    getRecommendedControlMode() {
+      return this.isTouchDevice ? "mobile" : "desktop";
+    }
+
+    restoreControlMode() {
+      const savedMode = storage.get(STORAGE_KEYS.controlMode, "");
+      if (savedMode === "mobile" || savedMode === "desktop") {
+        this.setControlMode(savedMode, { persist: false });
+      } else {
+        this.setControlMode(null, { persist: false });
+      }
+    }
+
+    setControlMode(mode, options = {}) {
+      const { persist = true } = options;
+      this.controlMode = mode === "mobile" || mode === "desktop" ? mode : null;
+      const mobileSelected = this.controlMode === "mobile";
+      const desktopSelected = this.controlMode === "desktop";
+
+      this.mobileModeBtn.classList.toggle("active", mobileSelected);
+      this.desktopModeBtn.classList.toggle("active", desktopSelected);
+      this.mobileHowTo.classList.toggle("active", mobileSelected);
+      this.desktopHowTo.classList.toggle("active", desktopSelected);
+      this.mobileHowTo.setAttribute("aria-hidden", mobileSelected ? "false" : "true");
+      this.desktopHowTo.setAttribute("aria-hidden", desktopSelected ? "false" : "true");
+
+      this.mobileModeBtn.setAttribute("aria-pressed", mobileSelected ? "true" : "false");
+      this.desktopModeBtn.setAttribute("aria-pressed", desktopSelected ? "true" : "false");
+
+      if (this.controlMode) {
+        this.devicePromptEl.textContent = "";
+        if (persist) storage.set(STORAGE_KEYS.controlMode, this.controlMode);
+      } else {
+        this.devicePromptEl.textContent = "Choose MOBILE or DESKTOP controls before you launch.";
+      }
     }
 
     syncSoundButton() {
@@ -703,6 +756,9 @@
       this.showOnlyOverlay(this.startOverlay);
       document.body.classList.remove("playing");
       this.startHighScoreEl.textContent = String(this.highScore);
+      if (!this.controlMode) {
+        this.setControlMode(this.getRecommendedControlMode(), { persist: false });
+      }
     }
 
     togglePause(forceResume = false) {
@@ -907,7 +963,7 @@
     }
 
     updateHud(force = false) {
-      const livesDisplay = "❤".repeat(Math.max(0, this.lives));
+      const livesDisplay = String(Math.max(0, this.lives));
       const next = {
         score: String(this.score),
         high: String(this.highScore),
@@ -920,7 +976,7 @@
         this.highScoreEl.textContent = next.high;
         this.startHighScoreEl.textContent = next.high;
       }
-      if (force || this.hudCache.lives !== next.lives) this.livesEl.textContent = next.lives || "—";
+      if (force || this.hudCache.lives !== next.lives) this.livesEl.textContent = next.lives;
       if (force || this.hudCache.wave !== next.wave) this.waveEl.textContent = next.wave;
 
       this.hudCache = next;
@@ -1028,6 +1084,10 @@
       }
 
       if (this.input.consumeStart() && this.state === STATES.START) {
+        if (!this.controlMode) {
+          this.setControlMode(this.getRecommendedControlMode(), { persist: false });
+          this.devicePromptEl.textContent = "Using recommended controls. You can switch any time.";
+        }
         this.audio.initialize();
         this.startGame();
       }

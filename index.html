@@ -13,8 +13,8 @@
     <section class="game-shell" aria-label="Game area">
       <header class="hud" aria-live="polite">
         <div class="hud-item"><span class="label">Score</span><span id="scoreValue" class="value">0</span></div>
-        <div class="hud-item"><span class="label">High</span><span id="highScoreValue" class="value">0</span></div>
-        <div class="hud-item"><span class="label">Lives</span><span id="livesValue" class="value">❤❤❤</span></div>
+        <div class="hud-item"><span class="label">High Score</span><span id="highScoreValue" class="value">0</span></div>
+        <div class="hud-item"><span class="label">Lives</span><span id="livesValue" class="value">3</span></div>
         <div class="hud-item"><span class="label">Wave</span><span id="waveValue" class="value">1</span></div>
         <button id="soundToggle" class="icon-btn" type="button" aria-label="Toggle sound">🔊 Sound</button>
       </header>
@@ -29,17 +29,36 @@
             <p class="subtitle">GALACTIC DEFENDER</p>
             <button id="playNowBtn" class="primary-btn" type="button">PLAY NOW</button>
             <p class="hint">Press <kbd>Enter</kbd> or <kbd>Space</kbd> to start</p>
+            <p id="devicePrompt" class="device-prompt" aria-live="polite"></p>
+            <section class="control-choice" aria-label="Control type selector">
+              <h2>HOW WILL YOU PLAY?</h2>
+              <div class="device-toggle" role="group" aria-label="Choose control type">
+                <button id="mobileModeBtn" class="secondary-btn device-btn" type="button" data-mode="mobile">MOBILE 📱</button>
+                <button id="desktopModeBtn" class="secondary-btn device-btn" type="button" data-mode="desktop">DESKTOP 💻</button>
+              </div>
+              <div class="instruction-panels">
+                <article id="mobileHowTo" class="how-to-panel" data-mode="mobile" aria-hidden="true">
+                  <h3>HOW TO PLAY ON MOBILE</h3>
+                  <ul>
+                    <li><strong>← LEFT:</strong> Move left</li>
+                    <li><strong>→ RIGHT:</strong> Move right</li>
+                    <li><strong>FIRE:</strong> Hold to shoot</li>
+                    <li>You can move and shoot simultaneously.</li>
+                  </ul>
+                </article>
+                <article id="desktopHowTo" class="how-to-panel" data-mode="desktop" aria-hidden="true">
+                  <h3>HOW TO PLAY ON DESKTOP</h3>
+                  <ul>
+                    <li><strong>MOUSE:</strong> Move your spaceship horizontally</li>
+                    <li><strong>LEFT MOUSE BUTTON:</strong> Hold to shoot</li>
+                    <li><strong>ARROW KEYS / A / D:</strong> Move</li>
+                    <li><strong>SPACE:</strong> Shoot</li>
+                    <li><strong>ESC / P:</strong> Pause</li>
+                  </ul>
+                </article>
+              </div>
+            </section>
             <p class="high-start">High Score: <strong id="startHighScore">0</strong></p>
-            <div class="how-to">
-              <h2>How to Play</h2>
-              <ul>
-                <li><strong>Desktop Move:</strong> Mouse (horizontal), Arrow Keys, or A/D</li>
-                <li><strong>Desktop Shoot:</strong> Hold Left Mouse Button or Space</li>
-                <li><strong>Pause:</strong> Esc or P</li>
-                <li><strong>Mobile:</strong> Hold LEFT/RIGHT to move, hold FIRE to shoot (can combine)</li>
-                <li><strong>Mobile Drag:</strong> Drag on the game area to steer while firing</li>
-              </ul>
-            </div>
           </div>
         </section>
 
