@@ -106,6 +106,10 @@
       this.mutePressed = false;
       this.bound = false;
       this.pointerMap = new Map();
+      this.mouseAimRatio = null;
+      this.mouseFollowEnabled = true;
+      this.canvasPointerId = null;
+      this.mouseFirePointerId = null;
     }
 
     bind(game) {
@@ -145,6 +149,7 @@
         };
 
         button.addEventListener("pointerdown", (event) => {
+          if (game.state !== STATES.PLAYING) return;
           event.preventDefault();
           button.setPointerCapture?.(event.pointerId);
           this.pointerMap.set(event.pointerId, action);
@@ -158,7 +163,6 @@
 
         button.addEventListener("pointerup", onPointerEnd);
         button.addEventListener("pointercancel", onPointerEnd);
-        button.addEventListener("pointerleave", onPointerEnd);
         button.addEventListener("lostpointercapture", onPointerEnd);
       };
 
@@ -166,12 +170,79 @@
       attachHoldButton(game.rightBtn, "right");
       attachHoldButton(game.fireBtn, "fire");
 
-      window.addEventListener("blur", () => {
-        this.left = false;
-        this.right = false;
-        this.fire = false;
-        this.pointerMap.clear();
+      const updateMouseAim = (clientX) => {
+        const rect = game.canvas.getBoundingClientRect();
+        if (rect.width <= 0) return;
+        this.mouseAimRatio = clamp((clientX - rect.left) / rect.width, 0, 1);
+      };
+
+      const onCanvasPointerMove = (event) => {
+        if (game.state !== STATES.PLAYING) return;
+        if (event.pointerType === "mouse") {
+          updateMouseAim(event.clientX);
+          return;
+        }
+        if (event.pointerId !== this.canvasPointerId) return;
+        event.preventDefault();
+        updateMouseAim(event.clientX);
+      };
+
+      const stopCanvasPointer = (event) => {
+        if (event.pointerId !== this.canvasPointerId) return;
+        this.canvasPointerId = null;
+      };
+
+      game.canvas.addEventListener("pointerdown", (event) => {
+        if (game.state !== STATES.PLAYING) return;
+        if (event.pointerType === "mouse") {
+          if (event.button !== 0) return;
+          event.preventDefault();
+          this.mouseFirePointerId = event.pointerId;
+          this.fire = true;
+          updateMouseAim(event.clientX);
+          return;
+        }
+        if (this.canvasPointerId !== null) return;
+        event.preventDefault();
+        game.canvas.setPointerCapture?.(event.pointerId);
+        this.canvasPointerId = event.pointerId;
+        updateMouseAim(event.clientX);
       });
+
+      game.canvas.addEventListener("pointermove", onCanvasPointerMove);
+      game.canvas.addEventListener("pointerup", stopCanvasPointer);
+      game.canvas.addEventListener("pointercancel", stopCanvasPointer);
+      game.canvas.addEventListener("lostpointercapture", stopCanvasPointer);
+
+      const onMousePointerEnd = (event) => {
+        if (event.pointerId !== this.mouseFirePointerId) return;
+        this.mouseFirePointerId = null;
+        this.fire = [...this.pointerMap.values()].includes("fire");
+      };
+
+      window.addEventListener("pointerup", onMousePointerEnd);
+      window.addEventListener("pointercancel", onMousePointerEnd);
+      window.addEventListener("blur", () => this.clearGameplayInputs());
+      document.addEventListener("visibilitychange", () => {
+        if (document.hidden) this.clearGameplayInputs();
+      });
+
+      game.canvas.addEventListener("contextmenu", (event) => event.preventDefault());
+    }
+
+    clearGameplayInputs() {
+      this.left = false;
+      this.right = false;
+      this.fire = false;
+      this.pointerMap.clear();
+      this.canvasPointerId = null;
+      this.mouseFirePointerId = null;
+    }
+
+    getMouseTargetX(width, min, max) {
+      if (!this.mouseFollowEnabled || this.mouseAimRatio === null) return null;
+      const x = this.mouseAimRatio * width;
+      return clamp(x, min, max);
     }
 
     consumePause() {
@@ -225,9 +296,19 @@
     }
 
     update(dt, input) {
+      const minX = this.radius + 8;
+      const maxX = this.game.width - this.radius - 8;
       const dir = (input.left ? -1 : 0) + (input.right ? 1 : 0);
-      this.x += dir * this.speed * dt;
-      this.x = clamp(this.x, this.radius + 8, this.game.width - this.radius - 8);
+      if (dir !== 0) {
+        this.x += dir * this.speed * dt;
+      } else {
+        const mouseTargetX = input.getMouseTargetX(this.game.width, minX, maxX);
+        if (mouseTargetX !== null) {
+          const follow = clamp(dt * 16, 0, 1);
+          this.x += (mouseTargetX - this.x) * follow;
+        }
+      }
+      this.x = clamp(this.x, minX, maxX);
 
       if (this.fireCooldown > 0) this.fireCooldown -= dt;
       if (this.invulnerable > 0) this.invulnerable -= dt;
@@ -589,6 +670,7 @@
 
     startGame() {
       this.state = STATES.PLAYING;
+      this.input.clearGameplayInputs();
       this.runStartHighScore = this.highScore;
       this.score = 0;
       this.kills = 0;
@@ -613,6 +695,7 @@
 
     backToMenu() {
       this.state = STATES.START;
+      this.input.clearGameplayInputs();
       this.projectiles.length = 0;
       this.enemies.length = 0;
       this.particles.length = 0;
@@ -626,14 +709,17 @@
       if (this.state === STATES.GAME_OVER || this.state === STATES.START) return;
       if (forceResume) {
         this.state = STATES.PLAYING;
+        this.input.clearGameplayInputs();
         this.showOnlyOverlay(null);
         return;
       }
       if (this.state === STATES.PLAYING) {
         this.state = STATES.PAUSED;
+        this.input.clearGameplayInputs();
         this.showOnlyOverlay(this.pauseOverlay);
       } else if (this.state === STATES.PAUSED) {
         this.state = STATES.PLAYING;
+        this.input.clearGameplayInputs();
         this.showOnlyOverlay(null);
       }
     }
@@ -716,6 +802,7 @@
 
     gameOver() {
       this.state = STATES.GAME_OVER;
+      this.input.clearGameplayInputs();
       this.audio.gameOver();
 
       this.finalScoreEl.textContent = String(this.score);

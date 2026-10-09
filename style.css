@@ -22,6 +22,7 @@ body {
   display: grid;
   place-items: center;
   padding: 10px;
+  padding-bottom: calc(10px + env(safe-area-inset-bottom));
   overflow: hidden;
   overscroll-behavior: none;
 }
@@ -248,18 +249,23 @@ kbd {
 .touch-controls {
   display: none;
   grid-template-columns: 1fr 1fr 1.35fr;
-  gap: 8px;
+  gap: 10px;
+  padding: 2px 0 calc(2px + env(safe-area-inset-bottom));
 }
 
 .touch-btn {
-  min-height: 64px;
-  font-size: 1.2rem;
+  min-height: 72px;
+  font-size: 1.1rem;
   font-weight: 800;
+  letter-spacing: 0.03em;
   touch-action: none;
+  border-width: 1.5px;
+  box-shadow: 0 0 14px rgba(65, 228, 255, 0.25);
 }
 
 .touch-btn.fire {
   background: linear-gradient(180deg, rgba(255, 90, 130, 0.35), rgba(100, 20, 50, 0.42));
+  box-shadow: 0 0 16px rgba(255, 102, 133, 0.3);
 }
 
 .playing .hud,
@@ -270,6 +276,10 @@ kbd {
 }
 
 @media (max-width: 780px) {
+  body { overflow: hidden; }
+
+  .app { width: min(100%, 900px); }
+
   .hud {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -281,6 +291,28 @@ kbd {
 
   #gameCanvas {
     height: min(64vh, 560px);
+  }
+
+  .touch-btn {
+    min-height: 76px;
+    font-size: 1.05rem;
+  }
+}
+
+@media (max-width: 560px) {
+  body { padding: 8px; }
+
+  #gameCanvas {
+    height: min(58vh, 500px);
+  }
+
+  .touch-controls {
+    grid-template-columns: 1fr 1fr 1.2fr;
+    gap: 8px;
+  }
+
+  .touch-btn {
+    min-height: 68px;
   }
 }
 
